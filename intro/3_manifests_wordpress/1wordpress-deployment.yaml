@@ -1,0 +1,190 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: wordpress-test
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysql-pass-test
+  namespace: wordpress-test
+type: Opaque
+stringData:
+  password: root
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pvc
+  namespace: wordpress-test
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-service-test
+  namespace: wordpress-test
+spec:
+  selector:
+    app: wordpress-test
+    tier: mysql
+  ports:
+    - port: 3306
+      targetPort: 3306
+  type: NodePort
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql-test
+  namespace: wordpress-test
+  labels:
+    app: wordpress-test
+    tier: mysql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wordpress-test
+      tier: mysql
+  template:
+    metadata:
+      labels:
+        app: wordpress-test
+        tier: mysql
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.0.27
+          resources:
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+          ports:
+            - containerPort: 3306
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-pass-test
+                  key: password
+            - name: MYSQL_DATABASE
+              value: wp_database
+            - name: MYSQL_USER
+              value: wp_user
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-pass-test
+                  key: password
+          volumeMounts:
+            - name: mysql-persistent-storage
+              mountPath: /var/lib/mysql
+      volumes:
+        - name: mysql-persistent-storage
+          persistentVolumeClaim:
+            claimName: mysql-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wordpress-service-test
+  namespace: wordpress-test
+spec:
+  selector:
+    app: wordpress-test
+    tier: frontend
+  ports:
+    - port: 80
+      targetPort: 80
+  type: NodePort
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wordpress-test
+  namespace: wordpress-test
+  labels:
+    app: wordpress-test
+    tier: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wordpress-test
+      tier: frontend
+  template:
+    metadata:
+      labels:
+        app: wordpress-test
+        tier: frontend
+    spec:
+      containers:
+        - name: wordpress-test
+          image: wordpress:5.8.2-apache
+          resources:
+            limits:
+              memory: "1024Mi"
+              cpu: "750m"
+            requests:
+              memory: "512Mi"
+              cpu: "375m"
+          ports:
+            - containerPort: 80
+          env:
+            - name: WORDPRESS_DB_HOST
+              value: mysql-service-test
+            - name: WORDPRESS_DB_USER
+              value: wp_user
+            - name: WORDPRESS_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-pass-test
+                  key: password
+            - name: WORDPRESS_DB_NAME
+              value: wp_database
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 30
+            periodSeconds: 5
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: wordpress-ingress-test
+  namespace: wordpress-test
+  annotations:
+    nginx.ingress.kubernetes.io/affinity: "cookie"
+    nginx.ingress.kubernetes.io/session-cookie-name: "wp-session"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "64m"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: wordpress.test
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: wordpress-service-test
+                port:
+                  number: 80

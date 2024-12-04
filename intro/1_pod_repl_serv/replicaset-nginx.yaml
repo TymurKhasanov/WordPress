@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: app-nginx-replicaset
+  namespace: app-nginx-namespace
+  labels:
+    name: app-nginx
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: app-nginx
+  template:
+    metadata:
+      labels:
+        app: app-nginx
+    spec:
+      containers:
+        - name: app-nginx
+          image: nginx:stable-alpine
+          resources:
+            limits:
+              memory: "128Mi"
+              cpu: "500m"
+          ports:
+            - containerPort: 80

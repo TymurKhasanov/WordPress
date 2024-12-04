@@ -1,0 +1,1 @@
+{"Modules":[{"Key":"","Source":"","Dir":"."},{"Key":"k8s_dashboard","Source":"./modules/k8s_dashboard","Dir":"modules/k8s_dashboard"},{"Key":"nginx_ingress","Source":"./modules/nginx_ingress","Dir":"modules/nginx_ingress"},{"Key":"wordpress_mysql","Source":"./modules/wordpress_mysql","Dir":"modules/wordpress_mysql"}]}

@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mysql-pv-prod
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: manual-prod
+  hostPath:
+    path: "/mnt/data/mysql" # Ensure this path exists on all nodes
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pvc-prod
+  namespace: wordpress-prod
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: manual-prod
+  resources:
+    requests:
+      storage: 10Gi

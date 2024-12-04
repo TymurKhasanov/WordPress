@@ -1,0 +1,29 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: simple-cron-job
+  labels:
+    app: simple-cronjob
+    environment: dev
+spec:
+  schedule: "*/1 * * * *" # Runs every day at midnight
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: hello
+              image: busybox
+              args:
+                - /bin/sh
+                - -c
+                - "echo Hello, Kubernetes CronJob!  The current time is $(date)"
+          restartPolicy: OnFailure
+
+      # * * * * *
+      # | | | | |
+      # | | | | +----- Day of the week (0 - 7) (Sunday is both 0 and 7)
+      # | | | +------- Month (1 - 12)
+      # | | +--------- Day of the month (1 - 31)
+      # | +----------- Hour (0 - 23)
+      # +------------- Minute (0 - 59)

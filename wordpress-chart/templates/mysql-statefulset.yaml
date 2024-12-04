@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql-prod
+  namespace: {{ .Values.namespace }}
+spec:
+  serviceName: mysql-headless-prod
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wordpress-prod
+      tier: mysql
+  template:
+    metadata:
+      labels:
+        app: wordpress-prod
+        tier: mysql
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      - k3d-k3dcluster-agent-1    
+      containers:
+        - name: mysql
+          image: {{ .Values.mysql.image }}
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-pass-prod
+                  key: password
+            - name: MYSQL_DATABASE
+              value: {{ .Values.wordpress.db.name }}
+            - name: MYSQL_USER
+              value: {{ .Values.wordpress.db.user }}
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-pass-prod
+                  key: password
+          volumeMounts:
+            - name: mysql-storage
+              mountPath: /var/lib/mysql
+  volumeClaimTemplates:
+    - metadata:
+        name: mysql-storage
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: manual-prod
+        resources:
+          requests:
+            storage: {{ .Values.mysql.storage }}

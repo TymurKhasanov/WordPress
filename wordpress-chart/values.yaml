@@ -1,0 +1,24 @@
+namespace: wordpress-prod
+
+mysql:
+  password: "cm9vdA==" # Base64 encoded root password
+  storage: 10Gi
+  image: "mysql:8.0.27"
+wordpress:
+  replicas: 3
+  image: "wordpress:5.8.2-apache"
+  db:
+    host: "mysql-prod-0.mysql-headless-prod"
+    user: "wp_user"
+    name: "wp_database"
+  resources:
+    limits:
+      memory: "1024Mi"
+      cpu: "750m"
+    requests:
+      memory: "512Mi"
+      cpu: "512m"
+ingress:
+  host: wordpress.prod
+
+useExistingPersistentVolume: true
